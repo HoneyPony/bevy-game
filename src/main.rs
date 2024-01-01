@@ -3,6 +3,49 @@ use bevy::{prelude::*, sprite::MaterialMesh2dBundle};
 #[derive(Clone, Copy)]
 struct FixP(i32);
 
+#[derive(Component)]
+struct PhysVec {
+	x: FixP,
+	y: FixP
+}
+
+#[derive(Component)]
+struct PhysAABB {
+	pos: PhysVec,
+	size: PhysVec
+}
+
+#[derive(Bundle)]
+struct PhysAABBBundle {
+	aabb: PhysAABB,
+	mesh: MaterialMesh2dBundle<ColorMaterial>
+}
+
+impl PhysAABBBundle {
+	pub fn new(aabb: PhysAABB, color: Color, meshes: &mut ResMut<Assets<Mesh>>, materials: &mut ResMut<Assets<ColorMaterial>>) -> Self {
+		return PhysAABBBundle {
+			aabb,
+			mesh: MaterialMesh2dBundle {
+				mesh: meshes.add(shape::Quad::new(Vec2::new(16.0, 16.0)).into()).into(),
+				material: materials.add(ColorMaterial::from(Color::rgb(1.0, 1.0, 0.2))).into(),
+				..Default::default()
+			}
+		}
+	}
+}
+
+fn aabb_subpx(x: i32, y: i32, width: i32, height: i32) -> PhysAABB {
+	return PhysAABB {
+		pos: PhysVec { x: FixP(x), y: FixP(y) },
+		size: PhysVec { x: FixP(width), y: FixP(height) }
+	}
+}
+
+fn aabb_tiles(x: i32, y: i32, width: i32, height: i32) -> PhysAABB {
+	let mul = 256 * 16;
+	return aabb_subpx(x * mul, y * mul, width * mul, height * mul)
+}
+
 impl From<FixP> for f32 {
     fn from(mut value: FixP) -> Self {
 		if value.0 == 0 { return 0.0; }
@@ -112,11 +155,11 @@ fn setup_player(
 		Player {},
 		BasicPlayerInput {},
 		FrameInput { ..Default::default() },
-		MaterialMesh2dBundle {
-			mesh: meshes.add(shape::Quad::new(Vec2::new(16.0, 16.0)).into()).into(),
-			material: materials.add(ColorMaterial::from(Color::rgb(1.0, 1.0, 0.2))).into(),
-			..Default::default()
-		}
+		PhysAABBBundle::new(
+			aabb_tiles(0, 0, 1, 1),
+			Color::rgb(1.0, 1.0, 0.5),
+			&mut meshes, &mut materials
+		)
 	));
 }
 
@@ -127,9 +170,7 @@ fn player_physics(mut query: Query<(&mut Transform, &FrameInput), With<Player>>)
 }
 
 fn render_player(mut query: Query<&mut Transform, With<Player>>) {
-	for mut tform in query.iter_mut() {
-		tform.rotate_z(13.0);
-	}
+
 }
 
 fn main() {
