@@ -106,13 +106,14 @@ pub fn move_and_slide(aabb: &mut PhysAABB, own_id: Entity, velocity: PhysVec, wo
 			if i32::signum(x) == i32::signum(vx) {
 				// If we're moving in this direction, clamp x if necessary.
 				if i32::abs(vx) > i32::abs(x) - 1 {
-					// If vx is larger than x, we need to scale the y velocity
-					// by the amount that we're scaling vx by.
-					if x != 0 {
-						vy = (vy * vx) / (x * 256); // Fixed point multiply
+					let y = (vy * vx) / (x * 256); // Fixed point multiply
+					let mut test = aabb.clone();
+					test.pos.y.0 += y;
+					if let None = y_dist(&test, other) {
+						// Now we know this is a collision.
+						vy = y;
+						vx = i32::signum(vx) * (i32::abs(x) - 1);
 					}
-
-					vx = i32::signum(vx) * (i32::abs(x) - 1);
 				}
 			}
 			//else if x == 0 {
@@ -126,15 +127,19 @@ pub fn move_and_slide(aabb: &mut PhysAABB, own_id: Entity, velocity: PhysVec, wo
 			if i32::signum(y) == i32::signum(vy) {
 				// If we're moving in this direction, clamp x if necessary.
 				if i32::abs(vy) > i32::abs(y) - 1 {
-					//println!("should do a collide -> {} vs {}", vy, y);
-					// If vx is larger than x, we need to scale the y velocity
-					// by the amount that we're scaling vx by.
-					if y != 0 {
-						vx = (vy * vx) / (y * 256); // Fixed point multiply
-					}
+					// Here, we know the y is potentially problematic.
+					// What we have to do is project the AABB downwards to
+					// see if it actually overlaps the X afterwards.
 
-					vy = i32::signum(vy) * (i32::abs(y) - 1);
-					println!("new vy = {}", vy);
+					// Note: y is guaranteed not to be 0.
+					let x = (vy * vx) / (y * 256); // Fixed point multiply
+					let mut test = aabb.clone();
+					test.pos.x.0 += x;
+					if let None = x_dist(&test, other) {
+						// Now we know this is a collision.
+						vx = x;
+						vy = i32::signum(vy) * (i32::abs(y) - 1);
+					}
 				}
 			}
 			//else if y == 0 {
