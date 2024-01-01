@@ -7,7 +7,9 @@ use crate::fixp::*;
 use crate::phys::*;
 
 #[derive(Component)]
-struct Player {}
+struct Player {
+	velocity: PhysVec
+}
 
 #[derive(Component, Default)]
 struct FrameInput {
@@ -62,7 +64,7 @@ fn setup_player(
     mut materials: ResMut<Assets<ColorMaterial>>
 ) {
 	commands.spawn((
-		Player {},
+		Player { velocity: phys::zero() },
 		BasicPlayerInput {},
 		FrameInput { ..Default::default() },
 		SolidColorPhysAABBBundle::new(
@@ -71,14 +73,40 @@ fn setup_player(
 			&mut meshes, &mut materials
 		)
 	));
+
+	commands.spawn(
+		SolidColorPhysAABBBundle::new(aabb_tiles(0, -3, 5, 1),
+		Color::rgb(0.2, 0.2, 0.2),
+		&mut meshes, &mut materials)
+	);
 }
 
-fn player_physics(mut query: Query<(&mut PhysAABB, &FrameInput), With<Player>>) {
-	for (mut aabb, input) in query.iter_mut() {
+fn player_update(mut query: Query<(&mut Player, &FrameInput)>) {
+	for (mut player, input) in query.iter_mut() {
 		let dist_x = (input.direction.x * 256.0 * 1.5) as i32;
 		let dist_y = (input.direction.y * 256.0 * 1.5) as i32;
-		aabb.pos.x.0 += dist_x;
-		aabb.pos.y.0 += dist_y;
+		player.velocity.x = FixP(dist_x);
+		player.velocity.y = FixP(dist_y);
+	}
+}
+
+fn player_physics(world: &mut World) {
+	// Collect player ids for performing physics
+	let player_ids: Vec<Entity> = world.query::<(Entity, With<Player>)>()
+		.iter(&world)
+		.map(|x| x.0)
+		.collect();
+
+	for id in player_ids {
+		// Step one: fetch original AABB for computing physics
+		let mut aabb = world.get::<PhysAABB>(id).unwrap().clone();
+		let velocity = world.get::<Player>(id).unwrap().velocity;
+
+		// Step two: perform a move_and_slide
+		phys::move_and_slide(&mut aabb, id, velocity, world);
+
+		// Step three: store AABB back into world
+		*world.get_mut::<PhysAABB>(id).unwrap() = aabb;
 	}
 }
 
@@ -103,6 +131,7 @@ fn main() {
 		// Render systems: convert game state into renderable state
 		.add_systems(Update, render_aabb_to_transform)
 		// Physics systems: must run at a fixed rate
+		.add_systems(FixedUpdate, player_update)
 		.add_systems(FixedUpdate, player_physics)
 		.add_systems(Update, bevy::window::close_on_esc)
 		.run();
