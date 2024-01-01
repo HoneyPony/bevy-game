@@ -115,8 +115,8 @@ fn player_physics(world: &mut World) {
 fn render_aabb_to_transform(mut query: Query<(&mut Transform, &PhysAABB)>) {
 	for (mut tform, aabb) in query.iter_mut() {
 		tform.translation = Vec3::new(
-			f32::from(aabb.pos.x),
-			f32::from(aabb.pos.y),
+			f32::from(aabb.pos.x) + 0.5 * f32::from(aabb.size.x),
+			f32::from(aabb.pos.y) + 0.5 * f32::from(aabb.size.y),
 			tform.translation.z
 		);
 	}
