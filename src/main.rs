@@ -163,14 +163,29 @@ fn setup_player(
 	));
 }
 
-fn player_physics(mut query: Query<(&mut Transform, &FrameInput), With<Player>>) {
-	for (mut tform, input) in query.iter_mut() {
-		tform.translation += input.direction.extend(0.0);
+fn player_physics(mut query: Query<(&mut PhysAABB, &FrameInput), With<Player>>) {
+	for (mut aabb, input) in query.iter_mut() {
+		let dist_x = (input.direction.x * 256.0 * 1.5) as i32;
+		let dist_y = (input.direction.y * 256.0 * 1.5) as i32;
+		aabb.pos.x.0 += dist_x;
+		aabb.pos.y.0 += dist_y;
 	}
 }
 
 fn render_player(mut query: Query<&mut Transform, With<Player>>) {
 
+}
+
+/// System that takes a physics object's AABB and computes a visual Transform
+/// associated with that.
+fn render_aabb_to_transform(mut query: Query<(&mut Transform, &PhysAABB)>) {
+	for (mut tform, aabb) in query.iter_mut() {
+		tform.translation = Vec3::new(
+			f32::from(aabb.pos.x),
+			f32::from(aabb.pos.y),
+			tform.translation.z
+		);
+	}
 }
 
 fn main() {
@@ -183,7 +198,7 @@ fn main() {
 		// Input systems: convert inputs into FrameInputs 
 		.add_systems(Update, (basic_inputs))
 		// Render systems: convert game state into renderable state
-		.add_systems(Update, (render_player))
+		.add_systems(Update, (render_player, render_aabb_to_transform))
 		// Physics systems: must run at a fixed rate
 		.add_systems(FixedUpdate, player_physics)
 		.add_systems(Update, bevy::window::close_on_esc)
