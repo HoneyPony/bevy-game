@@ -73,9 +73,16 @@ fn setup_player(
 			&mut meshes, &mut materials
 		)
 	));
+	
 
 	commands.spawn(
 		SolidColorPhysAABBBundle::new(aabb_tiles(0, -3, 5, 1),
+		Color::rgb(0.2, 0.2, 0.2),
+		&mut meshes, &mut materials)
+	);
+
+	commands.spawn(
+		SolidColorPhysAABBBundle::new(aabb_tiles(4, 0, 2, 6),
 		Color::rgb(0.2, 0.2, 0.2),
 		&mut meshes, &mut materials)
 	);
