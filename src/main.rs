@@ -115,9 +115,9 @@ fn physics_frame_start(mut query: Query<(&mut PhysLerpPos, &PhysAABB)>, mut acc:
 
 fn player_update(mut query: Query<(&mut Player, &FrameInput)>) {
 	// subpx / sec^2
-	const ACCEL: i32 = 256 * 16 * 16;
+	const ACCEL: i32 = 256 * 16 * 64;
 	// subpx / sec
-	const MAX_VEL: i32 = 256 * 16 * 4;
+	const MAX_VEL: i32 = 256 * 16 * 16;
 
 	for (mut player, input) in query.iter_mut() {
 		let input = PhysVec {

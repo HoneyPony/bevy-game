@@ -46,17 +46,23 @@ impl core::ops::Div<i32> for PhysVec {
 
 impl PhysVec {
 	pub fn clamp_length(&mut self, len: fixp) {
-		let test = self.x * self.x + self.y * self.y;
+		let mut x64 = self.x as i64;
+		let mut y64 = self.y as i64;
+		let test = x64 * x64 + y64 * y64;
+		let len = len as i64;
 		if test > (len * len) {
-			self.x *= len;
-			self.y *= len;
+			x64 *= len;
+			y64 *= len;
 
-			let sqrt = f32::sqrt(test as f32);
-			let sqrt = sqrt as i32;
+			let sqrt = f64::sqrt(test as f64);
+			let sqrt = sqrt as i64;
 
 			if sqrt != 0 {
-				self.x /= sqrt;
-				self.y /= sqrt;
+				x64 /= sqrt;
+				y64 /= sqrt;
+
+				self.x = x64 as i32;
+				self.y = y64 as i32;
 			}
 		}
 	}
