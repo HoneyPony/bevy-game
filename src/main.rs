@@ -76,7 +76,7 @@ fn setup_player(
 		BasicPlayerInput {},
 		FrameInput { ..Default::default() },
 		SolidColorPhysAABBBundle::new(
-			aabb_tiles(0, 0, 1, 1),
+			aabb_tiles(0, 0, 1, 2),
 			Color::rgb(1.0, 1.0, 0.5),
 			&mut meshes, &mut materials
 		)
@@ -114,11 +114,20 @@ fn physics_frame_start(mut query: Query<(&mut PhysLerpPos, &PhysAABB)>, mut acc:
 }
 
 fn player_update(mut query: Query<(&mut Player, &FrameInput)>) {
+	// subpx / sec^2
+	const ACCEL: i32 = 256 * 16 * 16;
+	// subpx / sec
+	const MAX_VEL: i32 = 256 * 16 * 4;
+
 	for (mut player, input) in query.iter_mut() {
-		let dist_x = (input.direction.x * 256.0 * 1.5) as i32;
-		let dist_y = (input.direction.y * 256.0 * 1.5) as i32;
-		player.velocity.x = dist_x;
-		player.velocity.y = dist_y;
+		let input = PhysVec {
+			x: (input.direction.x * 256.0) as i32,
+			y: (input.direction.y * 256.0) as i32
+		};
+		
+		let accel = input * ACCEL;
+		player.velocity += (accel / PHYS_FPS);
+		player.velocity.clamp_length(MAX_VEL);
 	}
 }
 
@@ -138,7 +147,7 @@ fn player_physics(world: &mut World) {
 	
 }
 
-const PHYS_TIMESTEP: f32 = 1.0/60.0;
+
 
 /// System that takes a physics object's AABB and computes a visual Transform
 /// associated with that.
@@ -172,7 +181,8 @@ fn main() {
 		.add_systems(Update, render_aabb_to_transform)
 		// Physics systems: must run at a fixed rate
 		.add_systems(FixedUpdate, physics_frame_start)
-		.add_systems(FixedUpdate, (player_update, player_physics).after(physics_frame_start))
+		.add_systems(FixedUpdate, player_update.after(physics_frame_start))
+		.add_systems(FixedUpdate, player_physics.after(player_update))
 		.add_systems(Update, bevy::window::close_on_esc)
 		.run();
 }

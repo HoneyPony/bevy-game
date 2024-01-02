@@ -1,5 +1,8 @@
 use bevy::{prelude::*, sprite::MaterialMesh2dBundle};
 
+pub const PHYS_TIMESTEP: f32 = 1.0/60.0;
+pub const PHYS_FPS: i32 = 60;
+
 use crate::fixp::*;
 
 #[derive(Component)]
@@ -9,6 +12,54 @@ pub struct Pushable {}
 pub struct PhysVec {
 	pub x: fixp,
 	pub y: fixp
+}
+
+impl core::ops::Add for PhysVec {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        PhysVec { x: self.x + rhs.x, y: self.y + rhs.y }
+    }
+}
+
+impl core::ops::AddAssign for PhysVec {
+    fn add_assign(&mut self, rhs: Self) {
+        *self = *self + rhs;
+    }
+}
+
+impl core::ops::Mul<i32> for PhysVec {
+	type Output = Self;
+
+	fn mul(self, rhs: i32) -> Self::Output {
+		PhysVec { x: fix_mul(self.x, rhs), y: fix_mul(self.y, rhs) }
+	}
+}
+
+impl core::ops::Div<i32> for PhysVec {
+	type Output = Self;
+	
+	fn div(self, rhs: i32) -> Self::Output {
+		PhysVec { x: self.x / rhs, y: self.y / rhs }
+	}
+}
+
+impl PhysVec {
+	pub fn clamp_length(&mut self, len: fixp) {
+		let test = self.x * self.x + self.y * self.y;
+		if test > (len * len) {
+			self.x *= len;
+			self.y *= len;
+
+			let sqrt = f32::sqrt(test as f32);
+			let sqrt = sqrt as i32;
+
+			if sqrt != 0 {
+				self.x /= sqrt;
+				self.y /= sqrt;
+			}
+		}
+	}
 }
 
 pub fn zero() -> PhysVec {
@@ -108,8 +159,8 @@ fn x_dist(r1: &PhysAABB, r2: &PhysAABB) -> Option<fixp> {
 
 pub fn move_and_slide(entity: Entity, velocity: PhysVec, world: &mut World) -> PhysVec {
 	// For each AABB in the world that isn't our own_id, we will clamp the velocity.
-	let mut vx = velocity.x;
-	let mut vy = velocity.y;
+	let mut vx = velocity.x / PHYS_FPS;
+	let mut vy = velocity.y / PHYS_FPS;
 
 	let mut aabb = world.get::<PhysAABB>(entity).unwrap().clone();
 

@@ -47,3 +47,7 @@ pub fn fixp_to_f32(mut value: fixp) -> f32 {
 
 	return f32::from_bits(bits);
 }
+
+pub fn fix_mul(lhs: fixp, rhs: fixp) -> fixp {
+	return lhs * rhs / 256;
+}
