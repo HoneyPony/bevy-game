@@ -102,6 +102,9 @@ pub fn move_and_slide(aabb: &mut PhysAABB, own_id: Option<Entity>, velocity: Phy
 	for (other, id) in world.query::<(&PhysAABB, Entity)>().iter(&world) {
 		if Some(id) == own_id { continue; }
 
+		let mut vx_new = vx;
+		let mut vy_new = vy;
+
 		if let Some(x) = x_dist(aabb, other) {
 			let x = x.0;
 			if i32::signum(x) == i32::signum(vx) {
@@ -114,8 +117,8 @@ pub fn move_and_slide(aabb: &mut PhysAABB, own_id: Option<Entity>, velocity: Phy
 					test.pos.y.0 += y;
 					if let None = y_dist(&test, other) {
 						// Now we know this is a collision.
-						vy = y;
-						vx = i32::signum(vx) * (i32::abs(x) - 1);
+						//vy = y;
+						vx_new = i32::signum(vx) * (i32::abs(x) - 1);
 					}
 				}
 			}
@@ -140,8 +143,8 @@ pub fn move_and_slide(aabb: &mut PhysAABB, own_id: Option<Entity>, velocity: Phy
 					test.pos.x.0 += x;
 					if let None = x_dist(&test, other) {
 						// Now we know this is a collision.
-						vx = x;
-						vy = i32::signum(vy) * (i32::abs(y) - 1);
+						//vx = x;
+						vy_new = i32::signum(vy) * (i32::abs(y) - 1);
 					}
 				}
 			}
@@ -149,6 +152,9 @@ pub fn move_and_slide(aabb: &mut PhysAABB, own_id: Option<Entity>, velocity: Phy
 			//	vy = 0;
 			//}
 		}
+
+		vx = vx_new;
+		vy = vy_new;
 
 		//println!("x dist: {} y dist: {}", x, y);
 	}
@@ -192,6 +198,6 @@ mod tests {
 
 		move_and_slide(&mut player, None, vec(256 * 16 * 8, -256 * 16 * 8), &mut app.world);
 
-		assert_eq!(player.pos, vec(256 * 16 * 1, 256 * 16 * -1 - 1));
+		assert_eq!(player.pos, vec(256 * 16 * 1, 256 * 16 * -1));
 	}
 }
