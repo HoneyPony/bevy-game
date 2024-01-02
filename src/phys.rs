@@ -2,6 +2,9 @@ use bevy::{prelude::*, sprite::MaterialMesh2dBundle};
 
 use crate::fixp::*;
 
+#[derive(Component)]
+pub struct Pushable {}
+
 #[derive(Component, Clone, Copy, PartialEq, Eq, Debug)]
 pub struct PhysVec {
 	pub x: FixP,
@@ -100,59 +103,79 @@ pub fn move_and_slide(entity: Entity, velocity: PhysVec, world: &mut World) -> P
 	let mut vy = velocity.y.0;
 
 	let mut aabb = world.get::<PhysAABB>(entity).unwrap().clone();
+
+	let vec: Vec<_> = world.query::<(Entity, With<PhysAABB>)>().iter(&world).collect();
 	
-	for (other, id) in world.query::<(&PhysAABB, Entity)>().iter(&world) {
+	for (id, _) in vec {
 		if id == entity { continue; }
 
 		let mut vx_new = vx;
 		let mut vy_new = vy;
 
-		if let Some(x) = x_dist(&aabb, other) {
-			let x = x.0;
-			if i32::signum(x) == i32::signum(vx) {
-				// If we're moving in this direction, clamp x if necessary.
-				if i32::abs(vx) > i32::abs(x) - 1 {
-					let x_ac = (i32::abs(x)) * i32::signum(x);
+		let mut other = world.get::<PhysAABB>(id).unwrap().clone();
 
-					let y = (vy * x_ac) / vx; // Fixed point multiply
-					let mut test = aabb.clone();
-					test.pos.y.0 += y;
-					if let None = y_dist(&test, other) {
-						// Now we know this is a collision.
-						//vy = y;
-						vx_new = i32::signum(vx) * (i32::abs(x) - 1);
+		let mut pushed = false;
+		loop {
+			if let Some(x) = x_dist(&aabb, &other) {
+				let x = x.0;
+				if i32::signum(x) == i32::signum(vx) {
+					// If we're moving in this direction, clamp x if necessary.
+					if i32::abs(vx) > i32::abs(x) - 1 {
+						let x_ac = (i32::abs(x)) * i32::signum(x);
+
+						let y = (vy * x_ac) / vx; // Fixed point multiply
+						let mut test = aabb.clone();
+						test.pos.y.0 += y;
+						if let None = y_dist(&test, &other) {
+							// Now we know this is a collision.
+
+							if !pushed && world.get::<Pushable>(id).is_some() {
+								move_and_slide(id, velocity, world);
+								other = world.get::<PhysAABB>(id).unwrap().clone();
+								pushed = true;
+								continue;
+							}
+
+							//vy = y;
+							vx_new = i32::signum(vx) * (i32::abs(x) - 1);
+						}
 					}
 				}
 			}
-			//else if x == 0 {
-			//	vx = 0;
-			//}
-		}
 
-		if let Some(y) = y_dist(&aabb, other) {
-			let y = y.0;
-			if i32::signum(y) == i32::signum(vy) {
-				// If we're moving in this direction, clamp x if necessary.
-				if i32::abs(vy) > i32::abs(y) - 1 {
-					// Here, we know the y is potentially problematic.
-					// What we have to do is project the AABB downwards to
-					// see if it actually overlaps the X afterwards.
+			if let Some(y) = y_dist(&aabb, &other) {
+				let y = y.0;
+				if i32::signum(y) == i32::signum(vy) {
+					// If we're moving in this direction, clamp x if necessary.
+					if i32::abs(vy) > i32::abs(y) - 1 {
+						// Here, we know the y is potentially problematic.
+						// What we have to do is project the AABB downwards to
+						// see if it actually overlaps the X afterwards.
 
-					let y_ac = (i32::abs(y)) * i32::signum(y);
-					// Note: y is guaranteed not to be 0.
-					let x = (vx * y_ac) / (vy); // Fixed point multiply
-					let mut test = aabb.clone();
-					test.pos.x.0 += x;
-					if let None = x_dist(&test, other) {
-						// Now we know this is a collision.
-						//vx = x;
-						vy_new = i32::signum(vy) * (i32::abs(y) - 1);
+						let y_ac = (i32::abs(y)) * i32::signum(y);
+						// Note: y is guaranteed not to be 0.
+						let x = (vx * y_ac) / (vy); // Fixed point multiply
+						let mut test = aabb.clone();
+						test.pos.x.0 += x;
+						if let None = x_dist(&test, &other) {
+							// Now we know this is a collision.
+							if !pushed && world.get::<Pushable>(id).is_some() {
+								move_and_slide(id, velocity, world);
+								other = world.get::<PhysAABB>(id).unwrap().clone();
+								pushed = true;
+								continue;
+							}
+
+							//vx = x;
+							vy_new = i32::signum(vy) * (i32::abs(y) - 1);
+						}
 					}
 				}
+				//else if y == 0 {
+				//	vy = 0;
+				//}
 			}
-			//else if y == 0 {
-			//	vy = 0;
-			//}
+			break;
 		}
 
 		vx = vx_new;

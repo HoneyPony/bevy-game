@@ -86,6 +86,13 @@ fn setup_player(
 		Color::rgb(0.2, 0.2, 0.2),
 		&mut meshes, &mut materials)
 	);
+
+	commands.spawn((
+		SolidColorPhysAABBBundle::new(aabb_tiles(2, 0, 1, 1),
+		Color::rgb(1.0, 0.9, 0.8),
+		&mut meshes, &mut materials
+		), Pushable{})
+	);
 }
 
 fn player_update(mut query: Query<(&mut Player, &FrameInput)>) {
