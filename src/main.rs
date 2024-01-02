@@ -184,5 +184,7 @@ fn main() {
 		.add_systems(FixedUpdate, player_update.after(physics_frame_start))
 		.add_systems(FixedUpdate, player_physics.after(player_update))
 		.add_systems(Update, bevy::window::close_on_esc)
+		// Make sure to always synchronize the FixedUpdate with our actual physics FPS
+		.insert_resource(Time::<Fixed>::from_seconds(PHYS_TIMESTEP as f64))
 		.run();
 }
