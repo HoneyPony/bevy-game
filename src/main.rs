@@ -110,11 +110,15 @@ fn player_physics(world: &mut World) {
 		let velocity = world.get::<Player>(id).unwrap().velocity;
 
 		// Step two: perform a move_and_slide
-		phys::move_and_slide(&mut aabb, id, velocity, world);
-
+		phys::move_and_slide(&mut aabb, Some(id), velocity, world);
+		println!("player pos = {:?}", aabb.pos);
 		// Step three: store AABB back into world
 		*world.get_mut::<PhysAABB>(id).unwrap() = aabb;
+
+		
 	}
+
+	
 }
 
 /// System that takes a physics object's AABB and computes a visual Transform

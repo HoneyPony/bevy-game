@@ -2,7 +2,7 @@ use bevy::{prelude::*, sprite::MaterialMesh2dBundle};
 
 use crate::fixp::*;
 
-#[derive(Component, Clone, Copy)]
+#[derive(Component, Clone, Copy, PartialEq, Eq, Debug)]
 pub struct PhysVec {
 	pub x: FixP,
 	pub y: FixP
@@ -18,12 +18,16 @@ pub struct PhysAABB {
 	pub size: PhysVec
 }
 
+pub fn vec(x: i32, y: i32) -> PhysVec {
+	return PhysVec{ x: FixP(x), y: FixP(y) };
+}
+
 impl PhysAABB {
-	pub fn bottom(&self) -> FixP { self.pos.y }
-	pub fn top(&self) -> FixP { FixP(self.pos.y.0 + self.size.y.0) }
+	pub fn bottom(&self) -> FixP { FixP(self.pos.y.0) }
+	pub fn top(&self) -> FixP { FixP(self.pos.y.0 + self.size.y.0 - 1) }
 
 	pub fn left(&self) -> FixP { self.pos.x }
-	pub fn right(&self) -> FixP { FixP(self.pos.x.0 + self.size.x.0) }
+	pub fn right(&self) -> FixP { FixP(self.pos.x.0 + self.size.x.0 - 1) }
 }
 
 #[derive(Bundle)]
@@ -90,19 +94,16 @@ fn x_dist(r1: &PhysAABB, r2: &PhysAABB) -> Option<FixP> {
 	None
 }
 
-pub fn move_and_slide(aabb: &mut PhysAABB, own_id: Entity, velocity: PhysVec, world: &mut World) -> PhysVec {
+pub fn move_and_slide(aabb: &mut PhysAABB, own_id: Option<Entity>, velocity: PhysVec, world: &mut World) -> PhysVec {
 	// For each AABB in the world that isn't our own_id, we will clamp the velocity.
 	let mut vx = velocity.x.0;
 	let mut vy = velocity.y.0;
-
-	println!("incoming vx vy = {} {}", vx, vy);
 	
 	for (other, id) in world.query::<(&PhysAABB, Entity)>().iter(&world) {
-		if id == own_id { continue; }
+		if Some(id) == own_id { continue; }
 
 		if let Some(x) = x_dist(aabb, other) {
 			let x = x.0;
-			println!("x dist = {}", x);
 			if i32::signum(x) == i32::signum(vx) {
 				// If we're moving in this direction, clamp x if necessary.
 				if i32::abs(vx) > i32::abs(x) - 1 {
@@ -123,7 +124,6 @@ pub fn move_and_slide(aabb: &mut PhysAABB, own_id: Entity, velocity: PhysVec, wo
 
 		if let Some(y) = y_dist(aabb, other) {
 			let y = y.0;
-			println!("y dist = {}", y);
 			if i32::signum(y) == i32::signum(vy) {
 				// If we're moving in this direction, clamp x if necessary.
 				if i32::abs(vy) > i32::abs(y) - 1 {
@@ -154,11 +154,26 @@ pub fn move_and_slide(aabb: &mut PhysAABB, own_id: Entity, velocity: PhysVec, wo
 	aabb.pos.x.0 += vx;
 	aabb.pos.y.0 += vy;
 
-	for (other, id) in world.query::<(&PhysAABB, Entity)>().iter(&world) {
-		if id == own_id { continue; }
-
-		println!("after moving -- x = {:?}, y = {:?}", x_dist(aabb, other).map(|a| a.0), y_dist(aabb, other).map(|a| a.0));
-	}
-
 	zero()
+}
+
+#[cfg(test)]
+mod tests {
+	use bevy::prelude::*;
+	use super::*;
+
+    #[test]
+    fn basic_y() {
+        let mut app = App::new();
+
+		// Fake player
+		let mut player = aabb_tiles(0, 0, 1, 1);
+
+		// Add obstacle
+		app.world.spawn(aabb_tiles(0, -2, 5, 1));
+
+		move_and_slide(&mut player, None, vec(0, -256 * 16 * 8), &mut app.world);
+
+		assert_eq!(player.pos, vec(256 * 16 * 0, 256 * 16 * -1));
+    }
 }
