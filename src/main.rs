@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy::render::camera::ScalingMode;
 
 mod fixp;
 mod phys;
@@ -55,7 +56,9 @@ fn basic_inputs(
 }
 
 fn setup_camera(mut commands: Commands) {
-	commands.spawn(Camera2dBundle::default());
+	let mut cam = Camera2dBundle::default();
+	cam.projection.scaling_mode = ScalingMode::FixedVertical(16.0 * 20.0);
+	commands.spawn(cam);
 }
 
 fn setup_player(
