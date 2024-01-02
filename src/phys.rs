@@ -1,7 +1,7 @@
 use bevy::{prelude::*, sprite::MaterialMesh2dBundle};
 
-pub const PHYS_TIMESTEP: f32 = 1.0/60.0;
-pub const PHYS_FPS: i32 = 60;
+pub const PHYS_TIMESTEP: f32 = 1.0/120.0;
+pub const PHYS_FPS: i32 = 120;
 
 use crate::fixp::*;
 
@@ -28,10 +28,10 @@ impl core::ops::AddAssign for PhysVec {
     }
 }
 
-impl core::ops::Mul<i32> for PhysVec {
+impl core::ops::Mul<fixp> for PhysVec {
 	type Output = Self;
 
-	fn mul(self, rhs: i32) -> Self::Output {
+	fn mul(self, rhs: fixp) -> Self::Output {
 		PhysVec { x: fix_mul(self.x, rhs), y: fix_mul(self.y, rhs) }
 	}
 }
@@ -42,6 +42,12 @@ impl core::ops::Div<i32> for PhysVec {
 	fn div(self, rhs: i32) -> Self::Output {
 		PhysVec { x: self.x / rhs, y: self.y / rhs }
 	}
+}
+
+impl core::ops::MulAssign<fixp> for PhysVec {
+    fn mul_assign(&mut self, rhs: fixp) {
+		*self = *self * rhs;
+    }
 }
 
 impl PhysVec {

@@ -128,6 +128,8 @@ fn player_update(mut query: Query<(&mut Player, &FrameInput)>) {
 		let accel = input * ACCEL;
 		player.velocity += (accel / PHYS_FPS);
 		player.velocity.clamp_length(MAX_VEL);
+
+		player.velocity *= 255;
 	}
 }
 
