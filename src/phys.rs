@@ -179,14 +179,14 @@ mod tests {
         let mut app = App::new();
 
 		// Fake player
-		let mut player = aabb_tiles(0, 0, 1, 1);
+		let player = app.world.spawn(aabb_tiles(0, 0, 1, 1)).id();
 
 		// Add obstacle
 		app.world.spawn(aabb_tiles(0, -2, 5, 1));
 
-		move_and_slide(&mut player, None, vec(0, -256 * 16 * 8), &mut app.world);
+		move_and_slide(player, vec(0, -256 * 16 * 8), &mut app.world);
 
-		assert_eq!(player.pos, vec(256 * 16 * 0, 256 * 16 * -1));
+		assert_eq!(app.world.get::<PhysAABB>(player).unwrap().pos, vec(256 * 16 * 0, 256 * 16 * -1));
     }
 
 	#[test]
@@ -194,13 +194,13 @@ mod tests {
 		let mut app = App::new();
 
 		// Fake player
-		let mut player = aabb_tiles(0, 0, 1, 1);
+		let player = app.world.spawn(aabb_tiles(0, 0, 1, 1)).id();
 
 		// Add obstacle
 		app.world.spawn(aabb_tiles(2, -2, 1, 1));
 
-		move_and_slide(&mut player, None, vec(256 * 16 * 8, -256 * 16 * 8), &mut app.world);
+		move_and_slide(player, vec(256 * 16 * 8, -256 * 16 * 8), &mut app.world);
 
-		assert_eq!(player.pos, vec(256 * 16 * 1, 256 * 16 * -1));
+		assert_eq!(app.world.get::<PhysAABB>(player).unwrap().pos, vec(256 * 16 * 1, 256 * 16 * -1));
 	}
 }
