@@ -107,7 +107,9 @@ pub fn move_and_slide(aabb: &mut PhysAABB, own_id: Option<Entity>, velocity: Phy
 			if i32::signum(x) == i32::signum(vx) {
 				// If we're moving in this direction, clamp x if necessary.
 				if i32::abs(vx) > i32::abs(x) - 1 {
-					let y = (vy * vx) / (x * 256); // Fixed point multiply
+					let x_ac = (i32::abs(x)) * i32::signum(x);
+
+					let y = (vy * x_ac) / vx; // Fixed point multiply
 					let mut test = aabb.clone();
 					test.pos.y.0 += y;
 					if let None = y_dist(&test, other) {
@@ -131,8 +133,9 @@ pub fn move_and_slide(aabb: &mut PhysAABB, own_id: Option<Entity>, velocity: Phy
 					// What we have to do is project the AABB downwards to
 					// see if it actually overlaps the X afterwards.
 
+					let y_ac = (i32::abs(y)) * i32::signum(y);
 					// Note: y is guaranteed not to be 0.
-					let x = (vy * vx) / (y * 256); // Fixed point multiply
+					let x = (vx * y_ac) / (vy); // Fixed point multiply
 					let mut test = aabb.clone();
 					test.pos.x.0 += x;
 					if let None = x_dist(&test, other) {
@@ -176,4 +179,19 @@ mod tests {
 
 		assert_eq!(player.pos, vec(256 * 16 * 0, 256 * 16 * -1));
     }
+
+	#[test]
+	fn corner() {
+		let mut app = App::new();
+
+		// Fake player
+		let mut player = aabb_tiles(0, 0, 1, 1);
+
+		// Add obstacle
+		app.world.spawn(aabb_tiles(2, -2, 1, 1));
+
+		move_and_slide(&mut player, None, vec(256 * 16 * 8, -256 * 16 * 8), &mut app.world);
+
+		assert_eq!(player.pos, vec(256 * 16 * 1, 256 * 16 * -1 - 1));
+	}
 }
