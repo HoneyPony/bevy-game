@@ -102,8 +102,8 @@ fn player_update(mut query: Query<(&mut Player, &FrameInput)>) {
 	for (mut player, input) in query.iter_mut() {
 		let dist_x = (input.direction.x * 256.0 * 1.5) as i32;
 		let dist_y = (input.direction.y * 256.0 * 1.5) as i32;
-		player.velocity.x = FixP(dist_x);
-		player.velocity.y = FixP(dist_y);
+		player.velocity.x = dist_x;
+		player.velocity.y = dist_y;
 	}
 }
 
@@ -128,8 +128,8 @@ fn player_physics(world: &mut World) {
 fn render_aabb_to_transform(mut query: Query<(&mut Transform, &PhysAABB)>) {
 	for (mut tform, aabb) in query.iter_mut() {
 		tform.translation = Vec3::new(
-			f32::from(aabb.pos.x) + 0.5 * f32::from(aabb.size.x),
-			f32::from(aabb.pos.y) + 0.5 * f32::from(aabb.size.y),
+			fixp_to_f32(aabb.pos.x) + 0.5 * fixp_to_f32(aabb.size.x),
+			fixp_to_f32(aabb.pos.y) + 0.5 * fixp_to_f32(aabb.size.y),
 			tform.translation.z
 		);
 	}
