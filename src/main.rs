@@ -23,6 +23,11 @@ struct FrameInput {
 #[derive(Component)]
 struct BasicPlayerInput {}
 
+#[derive(Resource)]
+struct PhysLerpAccumulator {
+	accumulator: f32
+}
+
 fn basic_inputs(
 	mut query: Query<&mut FrameInput, With<BasicPlayerInput>>,
 	keys: Res<Input<KeyCode>>
@@ -98,6 +103,16 @@ fn setup_player(
 	);
 }
 
+fn physics_frame_start(mut query: Query<(&mut PhysLerpPos, &PhysAABB)>, mut acc: ResMut<PhysLerpAccumulator>, time: Res<Time<Fixed>>) {
+	for (mut lerppos, aabb) in query.iter_mut() {
+		lerppos.pos = aabb.pos;
+	}
+
+	acc.accumulator -= time.delta_seconds();
+	//dbg!(acc.accumulator);
+	//dbg!(time.delta_seconds());
+}
+
 fn player_update(mut query: Query<(&mut Player, &FrameInput)>) {
 	for (mut player, input) in query.iter_mut() {
 		let dist_x = (input.direction.x * 256.0 * 1.5) as i32;
@@ -123,13 +138,24 @@ fn player_physics(world: &mut World) {
 	
 }
 
+const PHYS_TIMESTEP: f32 = 1.0/60.0;
+
 /// System that takes a physics object's AABB and computes a visual Transform
 /// associated with that.
-fn render_aabb_to_transform(mut query: Query<(&mut Transform, &PhysAABB)>) {
-	for (mut tform, aabb) in query.iter_mut() {
+fn render_aabb_to_transform(mut query: Query<(&mut Transform, &PhysAABB, &PhysLerpPos)>, mut acc: ResMut<PhysLerpAccumulator>, time: Res<Time>) {
+	acc.accumulator += time.delta_seconds();
+	let lerp = acc.accumulator / PHYS_TIMESTEP;
+	let lerp = f32::clamp(lerp, 0.0, 1.0);
+	
+	for (mut tform, aabb, lpos) in query.iter_mut() {
+		let pos0 = Vec2::new(fixp_to_f32(lpos.pos.x), fixp_to_f32(lpos.pos.y));
+		let pos1 = Vec2::new(fixp_to_f32(aabb.pos.x), fixp_to_f32(aabb.pos.y));
+
+		let pos = pos0.lerp(pos1, lerp);
+
 		tform.translation = Vec3::new(
-			fixp_to_f32(aabb.pos.x) + 0.5 * fixp_to_f32(aabb.size.x),
-			fixp_to_f32(aabb.pos.y) + 0.5 * fixp_to_f32(aabb.size.y),
+			pos.x + 0.5 * fixp_to_f32(aabb.size.x),
+			pos.y + 0.5 * fixp_to_f32(aabb.size.y),
 			tform.translation.z
 		);
 	}
@@ -138,14 +164,15 @@ fn render_aabb_to_transform(mut query: Query<(&mut Transform, &PhysAABB)>) {
 fn main() {
     App::new()
 		.add_plugins(DefaultPlugins)
+		.insert_resource(PhysLerpAccumulator{ accumulator: 0.0 })
 		.add_systems(Startup, (setup_camera, setup_player))
 		// Input systems: convert inputs into FrameInputs 
 		.add_systems(Update, basic_inputs)
 		// Render systems: convert game state into renderable state
 		.add_systems(Update, render_aabb_to_transform)
 		// Physics systems: must run at a fixed rate
-		.add_systems(FixedUpdate, player_update)
-		.add_systems(FixedUpdate, player_physics)
+		.add_systems(FixedUpdate, physics_frame_start)
+		.add_systems(FixedUpdate, (player_update, player_physics).after(physics_frame_start))
 		.add_systems(Update, bevy::window::close_on_esc)
 		.run();
 }

@@ -18,7 +18,12 @@ pub fn zero() -> PhysVec {
 #[derive(Component, Clone)]
 pub struct PhysAABB {
 	pub pos: PhysVec,
-	pub size: PhysVec
+	pub size: PhysVec,
+}
+
+#[derive(Component)]
+pub struct PhysLerpPos {
+	pub pos: PhysVec
 }
 
 pub fn vec(x: i32, y: i32) -> PhysVec {
@@ -36,6 +41,7 @@ impl PhysAABB {
 #[derive(Bundle)]
 pub struct SolidColorPhysAABBBundle {
 	pub aabb: PhysAABB,
+	pub lerp: PhysLerpPos,
 	pub mesh: MaterialMesh2dBundle<ColorMaterial>
 }
 
@@ -48,8 +54,11 @@ impl SolidColorPhysAABBBundle {
 		let pos_y: f32 = fixp_to_f32(aabb.pos.y);
 		let transform = Transform { translation: Vec3::new(pos_x, pos_y, 0.0), ..Default::default() };
 		
+		let lerp = PhysLerpPos { pos: aabb.pos };
+
 		return SolidColorPhysAABBBundle {
 			aabb,
+			lerp,
 			mesh: MaterialMesh2dBundle {
 				mesh: meshes.add(shape::Quad::new(Vec2::new(size_x, size_y)).into()).into(),
 				material: materials.add(ColorMaterial::from(color)).into(),
