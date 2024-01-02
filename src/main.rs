@@ -105,17 +105,9 @@ fn player_physics(world: &mut World) {
 		.collect();
 
 	for id in player_ids {
-		// Step one: fetch original AABB for computing physics
-		let mut aabb = world.get::<PhysAABB>(id).unwrap().clone();
-		let velocity = world.get::<Player>(id).unwrap().velocity;
+		let mut player = &world.get_mut::<Player>(id).unwrap();
 
-		// Step two: perform a move_and_slide
-		phys::move_and_slide(&mut aabb, Some(id), velocity, world);
-		println!("player pos = {:?}", aabb.pos);
-		// Step three: store AABB back into world
-		*world.get_mut::<PhysAABB>(id).unwrap() = aabb;
-
-		
+		phys::move_and_slide(id,  player.velocity, world);
 	}
 
 	

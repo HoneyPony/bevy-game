@@ -94,18 +94,20 @@ fn x_dist(r1: &PhysAABB, r2: &PhysAABB) -> Option<FixP> {
 	None
 }
 
-pub fn move_and_slide(aabb: &mut PhysAABB, own_id: Option<Entity>, velocity: PhysVec, world: &mut World) -> PhysVec {
+pub fn move_and_slide(entity: Entity, velocity: PhysVec, world: &mut World) -> PhysVec {
 	// For each AABB in the world that isn't our own_id, we will clamp the velocity.
 	let mut vx = velocity.x.0;
 	let mut vy = velocity.y.0;
+
+	let mut aabb = world.get::<PhysAABB>(entity).unwrap().clone();
 	
 	for (other, id) in world.query::<(&PhysAABB, Entity)>().iter(&world) {
-		if Some(id) == own_id { continue; }
+		if id == entity { continue; }
 
 		let mut vx_new = vx;
 		let mut vy_new = vy;
 
-		if let Some(x) = x_dist(aabb, other) {
+		if let Some(x) = x_dist(&aabb, other) {
 			let x = x.0;
 			if i32::signum(x) == i32::signum(vx) {
 				// If we're moving in this direction, clamp x if necessary.
@@ -127,7 +129,7 @@ pub fn move_and_slide(aabb: &mut PhysAABB, own_id: Option<Entity>, velocity: Phy
 			//}
 		}
 
-		if let Some(y) = y_dist(aabb, other) {
+		if let Some(y) = y_dist(&aabb, other) {
 			let y = y.0;
 			if i32::signum(y) == i32::signum(vy) {
 				// If we're moving in this direction, clamp x if necessary.
@@ -162,6 +164,7 @@ pub fn move_and_slide(aabb: &mut PhysAABB, own_id: Option<Entity>, velocity: Phy
 	// Now apply the velocity to the AABB.
 	aabb.pos.x.0 += vx;
 	aabb.pos.y.0 += vy;
+	*world.get_mut::<PhysAABB>(entity).unwrap() = aabb;
 
 	zero()
 }
