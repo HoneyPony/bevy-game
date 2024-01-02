@@ -130,11 +130,11 @@ pub fn move_and_slide(entity: Entity, velocity: PhysVec, world: &mut World) -> P
 							// Now we know this is a collision.
 
 							if !pushed && world.get::<Pushable>(id).is_some() {
-								let mx = x_dist(&aabb, &other).unwrap_or(FixP(0));
-								let my = y_dist(&aabb, &other).unwrap_or(FixP(0));
+								//let mx = x_dist(&aabb, &other).unwrap_or(FixP(0));
+								//let my = y_dist(&aabb, &other).unwrap_or(FixP(0));
 								let mut v = velocity.clone();
-								v.x.0 -= mx.0;
-								v.y.0 -= my.0;
+								v.x.0 -= x;
+								v.y.0 -= y;
 								move_and_slide(id, v, world);
 								other = world.get::<PhysAABB>(id).unwrap().clone();
 								pushed = true;
@@ -165,11 +165,11 @@ pub fn move_and_slide(entity: Entity, velocity: PhysVec, world: &mut World) -> P
 						if let None = x_dist(&test, &other) {
 							// Now we know this is a collision.
 							if !pushed && world.get::<Pushable>(id).is_some() {
-								let mx = x_dist(&aabb, &other).unwrap_or(FixP(0));
-								let my = y_dist(&aabb, &other).unwrap_or(FixP(0));
+								//let mx = x_dist(&aabb, &other).unwrap_or(FixP(0));
+								//let my = y_dist(&aabb, &other).unwrap_or(FixP(0));
 								let mut v = velocity.clone();
-								v.x.0 -= mx.0;
-								v.y.0 -= my.0;
+								v.x.0 -= x;
+								v.y.0 -= y;
 								move_and_slide(id, v, world);
 								other = world.get::<PhysAABB>(id).unwrap().clone();
 								pushed = true;
