@@ -49,5 +49,7 @@ pub fn fixp_to_f32(mut value: fixp) -> f32 {
 }
 
 pub fn fix_mul(lhs: fixp, rhs: fixp) -> fixp {
-	return lhs * rhs / 256;
+	let lhs: i64 = lhs as i64;
+	let rhs: i64 = rhs as i64;
+	return (lhs * rhs / 256) as fixp;
 }
