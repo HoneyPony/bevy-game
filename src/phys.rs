@@ -169,7 +169,7 @@ fn x_dist(r1: &PhysAABB, r2: &PhysAABB) -> Option<fixp> {
 	None
 }
 
-pub fn move_and_slide(entity: Entity, velocity: PhysVec, world: &mut World) -> PhysVec {
+fn move_and_slide_impl(entity: Entity, velocity: PhysVec, world: &mut World, clamp_x: &mut bool, clamp_y: &mut bool) {
 	// For each AABB in the world that isn't our own_id, we will clamp the velocity.
 	let mut vx = velocity.x / PHYS_FPS;
 	let mut vy = velocity.y / PHYS_FPS;
@@ -178,7 +178,7 @@ pub fn move_and_slide(entity: Entity, velocity: PhysVec, world: &mut World) -> P
 
 	let vec: Vec<_> = world.query::<(Entity, With<PhysAABB>)>().iter(&world).collect();
 
-	let mut ret_velocity = velocity;
+	//let mut ret_velocity = velocity;
 	
 	for (id, _) in vec {
 		if id == entity { continue; }
@@ -206,7 +206,7 @@ pub fn move_and_slide(entity: Entity, velocity: PhysVec, world: &mut World) -> P
 								let mut v = velocity.clone();
 								v.x -= x;
 								v.y -= y;
-								move_and_slide(id, v, world);
+								move_and_slide_impl(id, v, world, clamp_x, clamp_y);
 								other = world.get::<PhysAABB>(id).unwrap().clone();
 								pushed = true;
 								continue;
@@ -214,7 +214,8 @@ pub fn move_and_slide(entity: Entity, velocity: PhysVec, world: &mut World) -> P
 
 							//vy = y;
 							vx_new = i32::signum(vx) * (i32::abs(x) - 1);
-							ret_velocity.x = 0; // Cancel out x velocity on x collision
+							if !pushed { *clamp_x = true; }
+							//ret_velocity.x = 0; // Cancel out x velocity on x collision
 						}
 					}
 				}
@@ -239,7 +240,7 @@ pub fn move_and_slide(entity: Entity, velocity: PhysVec, world: &mut World) -> P
 								let mut v = velocity.clone();
 								v.x -= x;
 								v.y -= y;
-								move_and_slide(id, v, world);
+								move_and_slide_impl(id, v, world, clamp_x, clamp_y);
 								other = world.get::<PhysAABB>(id).unwrap().clone();
 								pushed = true;
 								continue;
@@ -247,7 +248,8 @@ pub fn move_and_slide(entity: Entity, velocity: PhysVec, world: &mut World) -> P
 
 							//vx = x;
 							vy_new = i32::signum(vy) * (i32::abs(y) - 1);
-							ret_velocity.y = 0; // Cancel y velocity on y collision
+							if !pushed { *clamp_y = true; }
+							//ret_velocity.y = 0; // Cancel y velocity on y collision
 						}
 					}
 				}
@@ -268,8 +270,15 @@ pub fn move_and_slide(entity: Entity, velocity: PhysVec, world: &mut World) -> P
 	aabb.pos.x += vx;
 	aabb.pos.y += vy;
 	*world.get_mut::<PhysAABB>(entity).unwrap() = aabb;
+}
 
-	ret_velocity
+pub fn move_and_slide(entity: Entity, mut velocity: PhysVec, world: &mut World) -> PhysVec {
+	let mut clamp_x = false;
+	let mut clamp_y = false;
+	move_and_slide_impl(entity, velocity, world, &mut clamp_x, &mut clamp_y);
+	if clamp_x { velocity.x = 0; }
+	if clamp_y { velocity.y = 0; }
+	return velocity;
 }
 
 #[cfg(test)]
