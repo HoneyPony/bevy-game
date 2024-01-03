@@ -118,16 +118,24 @@ fn player_update(mut query: Query<(&mut Player, &FrameInput)>) {
 	const ACCEL: i32 = 256 * 16 * 64;
 	// subpx / sec
 	const MAX_VEL: i32 = 256 * 16 * 16;
+	const GRAVITY: i32 = 256 * 16 * 32;
 
-	for (mut player, input) in query.iter_mut() {
+	for (mut player, finput) in query.iter_mut() {
 		let input = PhysVec {
-			x: (input.direction.x * 256.0) as i32,
-			y: (input.direction.y * 256.0) as i32
+			x: (finput.direction.x * 256.0) as i32,
+			y: (finput.direction.y * 256.0) as i32
 		};
 		
 		let accel = input * ACCEL;
-		player.velocity += (accel / PHYS_FPS);
-		player.velocity.clamp_length(MAX_VEL);
+		player.velocity.x += (accel.x / PHYS_FPS);
+		player.velocity.x = i32::clamp(player.velocity.x, -MAX_VEL, MAX_VEL);
+
+		player.velocity.y -= GRAVITY / PHYS_FPS;
+
+		if finput.jump_pressed {
+			player.velocity.y = 256 * 16 * 16;
+		}
+		//player.velocity.clamp_length(MAX_VEL);
 
 		player.velocity *= 255;
 	}
