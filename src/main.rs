@@ -85,13 +85,13 @@ fn setup_player(
 
 	commands.spawn(
 		SolidColorPhysAABBBundle::new(aabb_tiles(0, -3, 5, 1),
-		Color::rgb(0.2, 0.2, 0.2),
+		Color::rgb(0.4, 0.4, 0.4),
 		&mut meshes, &mut materials)
 	);
 
 	commands.spawn(
-		SolidColorPhysAABBBundle::new(aabb_tiles(4, 0, 2, 6),
-		Color::rgb(0.2, 0.2, 0.2),
+		SolidColorPhysAABBBundle::new(aabb_tiles(4, 0, 1, 6),
+		Color::rgb(0.4, 0.4, 0.4),
 		&mut meshes, &mut materials)
 	);
 
@@ -131,6 +131,9 @@ fn player_update(mut query: Query<(&mut Player, &FrameInput)>) {
 		player.velocity.x = i32::clamp(player.velocity.x, -MAX_VEL, MAX_VEL);
 
 		player.velocity.y -= GRAVITY / PHYS_FPS;
+		if player.velocity.y < -MAX_VEL {
+			player.velocity.y = -MAX_VEL;
+		}
 
 		if finput.jump_pressed {
 			player.velocity.y = 256 * 16 * 16;
