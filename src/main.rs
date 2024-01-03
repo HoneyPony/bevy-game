@@ -141,9 +141,12 @@ fn player_physics(world: &mut World) {
 		.collect();
 
 	for id in player_ids {
-		let mut player = &world.get_mut::<Player>(id).unwrap();
+		let player = world.get::<Player>(id).unwrap();
 
-		phys::move_and_slide(id,  player.velocity, world);
+		let v = phys::move_and_slide(id,  player.velocity, world);
+
+		let mut player = world.get_mut::<Player>(id).unwrap();
+		player.velocity = v;
 	}
 
 	

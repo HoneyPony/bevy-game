@@ -177,6 +177,8 @@ pub fn move_and_slide(entity: Entity, velocity: PhysVec, world: &mut World) -> P
 	let mut aabb = world.get::<PhysAABB>(entity).unwrap().clone();
 
 	let vec: Vec<_> = world.query::<(Entity, With<PhysAABB>)>().iter(&world).collect();
+
+	let mut ret_velocity = velocity;
 	
 	for (id, _) in vec {
 		if id == entity { continue; }
@@ -212,6 +214,7 @@ pub fn move_and_slide(entity: Entity, velocity: PhysVec, world: &mut World) -> P
 
 							//vy = y;
 							vx_new = i32::signum(vx) * (i32::abs(x) - 1);
+							ret_velocity.x = 0; // Cancel out x velocity on x collision
 						}
 					}
 				}
@@ -244,6 +247,7 @@ pub fn move_and_slide(entity: Entity, velocity: PhysVec, world: &mut World) -> P
 
 							//vx = x;
 							vy_new = i32::signum(vy) * (i32::abs(y) - 1);
+							ret_velocity.y = 0; // Cancel y velocity on y collision
 						}
 					}
 				}
@@ -265,7 +269,7 @@ pub fn move_and_slide(entity: Entity, velocity: PhysVec, world: &mut World) -> P
 	aabb.pos.y += vy;
 	*world.get_mut::<PhysAABB>(entity).unwrap() = aabb;
 
-	zero()
+	ret_velocity
 }
 
 #[cfg(test)]
