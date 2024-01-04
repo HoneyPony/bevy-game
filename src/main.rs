@@ -124,7 +124,7 @@ fn setup_player(
 
 	commands.spawn((
 		SolidColorPhysAABBBundle::new(
-			aabb_tiles(-2, 0, 3, 1),
+			aabb_tiles(-6, 1, 3, 1),
 			Color::rgb(0.6, 0.6, 0.6),
 			&mut meshes, &mut materials
 		),
@@ -165,6 +165,7 @@ fn physics_frame_start(mut query: Query<(&mut PhysLerpPos, &PhysAABB)>, mut acc:
 fn player_update(mut query: Query<(&mut Player, &FrameInput)>) {
 	// subpx / sec^2
 	const ACCEL: i32 = 256 * 16 * 64;
+	const DRAG: i32 = 256 * 16 * 16;
 	// subpx / sec
 	const MAX_VEL: i32 = 256 * 16 * 16;
 	const GRAVITY: i32 = 256 * 16 * 32;
@@ -174,6 +175,10 @@ fn player_update(mut query: Query<(&mut Player, &FrameInput)>) {
 			x: (finput.direction.x * 256.0) as i32,
 			y: (finput.direction.y * 256.0) as i32
 		};
+
+		let drag = i32::signum(player.velocity.x) * -DRAG / PHYS_FPS;
+		let drag = i32::clamp(drag, -i32::abs(player.velocity.x), i32::abs(player.velocity.x));
+		player.velocity.x += drag;
 		
 		let accel = input * ACCEL;
 		player.velocity.x += (accel.x / PHYS_FPS);
@@ -188,8 +193,6 @@ fn player_update(mut query: Query<(&mut Player, &FrameInput)>) {
 			player.velocity.y = 256 * 16 * 16;
 		}
 		//player.velocity.clamp_length(MAX_VEL);
-
-		player.velocity *= 255;
 	}
 }
 
