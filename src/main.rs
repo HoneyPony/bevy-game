@@ -66,12 +66,52 @@ fn setup_camera(mut commands: Commands) {
 	commands.spawn(cam);
 }
 
+#[derive(Component)]
+struct BasicMovingPlatform {
+	length: i32,
+	length_remaining: i32,
+	speed: i32,
+	direction: i32
+}
+
+fn moving_platform_physics(world: &mut World) {
+	// Collect player ids for performing physics
+	let mp_ids: Vec<Entity> = world.query::<(Entity, With<BasicMovingPlatform>)>()
+		.iter(&world)
+		.map(|x| x.0)
+		.collect();
+
+	for id in mp_ids {
+		let mp = world.get::<BasicMovingPlatform>(id).unwrap();
+
+		let increment = i32::min(mp.length_remaining * PHYS_FPS, mp.speed);
+
+		let vel = PhysVec { x: increment * mp.direction, y: 0 };
+		//dbg!(vel);
+
+		let res = phys::move_and_slide(id, vel, world);
+
+		let mut mp = world.get_mut::<BasicMovingPlatform>(id).unwrap();
+
+		mp.length_remaining -= i32::abs(res.x);
+		if mp.length_remaining <= 0 {
+			mp.length_remaining = mp.length;
+			mp.direction *= -1;
+		}
+
+		//let v = phys::move_and_slide(id,  player.velocity, world);
+	}
+
+	
+}
+
 fn setup_player(
 	mut commands: Commands,
 	mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>
 ) {
 	commands.spawn((
+		Pushable {},
 		Player { velocity: phys::zero() },
 		BasicPlayerInput {},
 		FrameInput { ..Default::default() },
@@ -81,10 +121,19 @@ fn setup_player(
 			&mut meshes, &mut materials
 		)
 	));
+
+	commands.spawn((
+		SolidColorPhysAABBBundle::new(
+			aabb_tiles(-2, 0, 3, 1),
+			Color::rgb(0.6, 0.6, 0.6),
+			&mut meshes, &mut materials
+		),
+		BasicMovingPlatform { length: 256 * 16 * 400, length_remaining: 256 * 16 * 400, speed: 256 * 16 * 8, direction: 1 }
+	));
 	
 
 	commands.spawn(
-		SolidColorPhysAABBBundle::new(aabb_tiles(0, -3, 5, 1),
+		SolidColorPhysAABBBundle::new(aabb_tiles(0, -3, 11, 1),
 		Color::rgb(0.4, 0.4, 0.4),
 		&mut meshes, &mut materials)
 	);
@@ -199,6 +248,7 @@ fn main() {
 		.add_systems(FixedUpdate, physics_frame_start)
 		.add_systems(FixedUpdate, player_update.after(physics_frame_start))
 		.add_systems(FixedUpdate, player_physics.after(player_update))
+		.add_systems(FixedUpdate, moving_platform_physics.after(player_physics))
 		.add_systems(Update, bevy::window::close_on_esc)
 		// Make sure to always synchronize the FixedUpdate with our actual physics FPS
 		.insert_resource(Time::<Fixed>::from_seconds(PHYS_TIMESTEP as f64))
