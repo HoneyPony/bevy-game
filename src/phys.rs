@@ -1,9 +1,9 @@
-use bevy::{prelude::*, sprite::MaterialMesh2dBundle};
+use bevy::{prelude::*, sprite::{MaterialMesh2dBundle, collide_aabb::Collision}};
 
 pub const PHYS_TIMESTEP: f32 = 1.0/120.0;
 pub const PHYS_FPS: i32 = 120;
 
-use crate::fixp::*;
+use crate::{fixp::*};
 
 #[derive(Component)]
 pub struct Pushable {}
@@ -82,6 +82,11 @@ pub fn zero() -> PhysVec {
 pub struct PhysAABB {
 	pub pos: PhysVec,
 	pub size: PhysVec,
+}
+
+#[derive(Component)]
+pub struct PhysVelocityMarker {
+	pub velocity: PhysVec
 }
 
 #[derive(Component)]
@@ -169,7 +174,20 @@ fn x_dist(r1: &PhysAABB, r2: &PhysAABB) -> Option<fixp> {
 	None
 }
 
-fn move_and_slide_impl(entity: Entity, velocity: PhysVec, world: &mut World, clamp_x: &mut bool, clamp_y: &mut bool) {
+#[derive(Debug)]
+pub enum CollisionResult {
+	With { id: Entity, marked_velocity: PhysVec },
+	Nothing
+}
+
+fn get_marked_velocity(id: Entity, world: &World) -> PhysVec {
+	match world.get::<PhysVelocityMarker>(id) {
+		Some(v) => v.velocity,
+		None => zero()
+	}
+}
+
+fn move_and_slide_impl(entity: Entity, velocity: PhysVec, world: &mut World, clamp_x: &mut bool, clamp_y: &mut bool, result: &mut CollisionResult) {
 	// For each AABB in the world that isn't our own_id, we will clamp the velocity.
 	let mut vx = velocity.x / PHYS_FPS;
 	let mut vy = velocity.y / PHYS_FPS;
@@ -206,7 +224,8 @@ fn move_and_slide_impl(entity: Entity, velocity: PhysVec, world: &mut World, cla
 								let mut v = velocity.clone();
 								v.x -= x;
 								v.y -= y;
-								move_and_slide_impl(id, v, world, clamp_x, clamp_y);
+								let mut dummy = CollisionResult::Nothing;
+								move_and_slide_impl(id, v, world, clamp_x, clamp_y, &mut dummy);
 								other = world.get::<PhysAABB>(id).unwrap().clone();
 								pushed = true;
 								continue;
@@ -215,6 +234,10 @@ fn move_and_slide_impl(entity: Entity, velocity: PhysVec, world: &mut World, cla
 							//vy = y;
 							vx_new = i32::signum(vx) * (i32::abs(x) - 1);
 							if !pushed { *clamp_x = true; }
+
+							// Update collision result
+							*result = CollisionResult::With { id, marked_velocity: get_marked_velocity(id, world) };
+
 							//ret_velocity.x = 0; // Cancel out x velocity on x collision
 						}
 					}
@@ -240,7 +263,8 @@ fn move_and_slide_impl(entity: Entity, velocity: PhysVec, world: &mut World, cla
 								let mut v = velocity.clone();
 								v.x -= x;
 								v.y -= y;
-								move_and_slide_impl(id, v, world, clamp_x, clamp_y);
+								let mut dummy = CollisionResult::Nothing;
+								move_and_slide_impl(id, v, world, clamp_x, clamp_y, &mut dummy);
 								other = world.get::<PhysAABB>(id).unwrap().clone();
 								pushed = true;
 								continue;
@@ -249,6 +273,8 @@ fn move_and_slide_impl(entity: Entity, velocity: PhysVec, world: &mut World, cla
 							//vx = x;
 							vy_new = i32::signum(vy) * (i32::abs(y) - 1);
 							if !pushed { *clamp_y = true; }
+
+							*result = CollisionResult::With { id, marked_velocity: get_marked_velocity(id, world) };
 							//ret_velocity.y = 0; // Cancel y velocity on y collision
 						}
 					}
@@ -272,12 +298,18 @@ fn move_and_slide_impl(entity: Entity, velocity: PhysVec, world: &mut World, cla
 	*world.get_mut::<PhysAABB>(entity).unwrap() = aabb;
 }
 
-pub fn move_and_slide(entity: Entity, mut velocity: PhysVec, world: &mut World) -> PhysVec {
+pub fn move_and_slide(entity: Entity, mut velocity: PhysVec, world: &mut World, result: Option<&mut CollisionResult>) -> PhysVec {
 	let mut clamp_x = false;
 	let mut clamp_y = false;
-	move_and_slide_impl(entity, velocity, world, &mut clamp_x, &mut clamp_y);
+	let mut col_result: CollisionResult = CollisionResult::Nothing;
+	move_and_slide_impl(entity, velocity, world, &mut clamp_x, &mut clamp_y, &mut col_result);
 	if clamp_x { velocity.x = 0; }
 	if clamp_y { velocity.y = 0; }
+
+	if let Some(ptr) = result {
+		*ptr = col_result;
+	}
+
 	return velocity;
 }
 
@@ -296,7 +328,7 @@ mod tests {
 		// Add obstacle
 		app.world.spawn(aabb_tiles(0, -2, 5, 1));
 
-		move_and_slide(player, vec(0, -256 * 16 * 8), &mut app.world);
+		move_and_slide(player, vec(0, -256 * 16 * 8), &mut app.world, None);
 
 		assert_eq!(app.world.get::<PhysAABB>(player).unwrap().pos, vec(256 * 16 * 0, 256 * 16 * -1));
     }
@@ -311,7 +343,7 @@ mod tests {
 		// Add obstacle
 		app.world.spawn(aabb_tiles(2, -2, 1, 1));
 
-		move_and_slide(player, vec(256 * 16 * 8, -256 * 16 * 8), &mut app.world);
+		move_and_slide(player, vec(256 * 16 * 8, -256 * 16 * 8), &mut app.world, None);
 
 		assert_eq!(app.world.get::<PhysAABB>(player).unwrap().pos, vec(256 * 16 * 1, 256 * 16 * -1));
 	}
